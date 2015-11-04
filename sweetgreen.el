@@ -10,6 +10,10 @@
 
 (defvar sweetgreen--cookie-regexp "_session_id=\\([^;]+\\)"
   "Regular expression to get the Session ID from the response's headers.")
+(defvar sweetgreen--username ""
+  "Username for http://orders.sweetgreen.com")
+(defvar sweetgreen--password ""
+  "Password for http://orders.sweetgreen.com")
 
 (defvar sweetgreen--csrf-token ""
   "CSRF Token for http://orders.sweetgreen.com")
@@ -24,6 +28,9 @@
 (defvar sweetgreen--curr-restaurant nil
   "Current Restaurant")
 
+(defvar sweeetgreens--default-restaurant nil
+  "Default restaurant id")
+
 (defvar order-id nil)
 (defvar items '())
 (defvar orders '())
@@ -35,34 +42,107 @@
 
 ;; (url-hexify-string "455 broadway")
 ;; (setq json-object-type "hash-table")
-(helm-mini)
 
-(sweetgreen/make-order 10003 26 )
+(defun sweetgreen//auth (&optional username password)
+  (interactive)
+  (if (and sweetgreen--username username)
+      (setq sweetgreen--username (read-from-minibuffer "Username: "))
+    (setq sweetgreen--username username))
+  (if (and sweetgreen--password password)
+      (setq sweetgreen--password (read-passwd "Super Secret Password: "))
+    (setq sweetgreen--password password))
+
+  (sweetgreen//fetch-csrf-token)
+  (sweetgreen//fetch-auth-cookie username password))
+
+(defun sweetgreen//fetch-csrf-token ()
+  (let* ((response (request
+                   "https://order.sweetgreen.com"
+                   :type "GET"
+                   :sync t
+                   :parser 'buffer-string
+                   :error
+                   (function* (lambda (&key error-thrown &allow-other-keys&rest _)
+                                (error "Got error: %S" error-thrown)))
+                   ))
+        (data  (request-response-data response))
+        (csrf-token (progn
+                      (string-match sweetgreen--csrf-token-regexp data)
+                      (match-string 1 data))))
+    (setq sweetgreen--csrf-token csrf-token)))
+
+(defun sweetgreen//fetch-auth-cookie (username password)
+  (let* ((response (request
+                    "https://order.sweetgreen.com/api/customers/login"
+                    :type "POST"
+                    :sync t
+                    :data `(("customer[email]" . ,username)
+                            ("customer[password]" . ,password))
+                    :headers '(("Content-Type" . "application/x-www-form-urlencoded; charset=UTF-8"))
+                    :parser 'buffer-string
+                    :error
+                    (function* (lambda (&key error-thrown &allow-other-keys&rest _)
+                                 (error "Got error: %S" error-thrown)))
+                    ))
+         (header (request-response-header response "set-cookie"))
+         (cookie-string (progn
+                          (string-match sweetgreen--cookie-regexp header)
+                          (concat "_session_id=" (match-string 1 header)))))
+    (setq sweetgreen--cookie-string cookie-string)))
+
+(defun sweetgreen ()
+  (interactive)
+  ;; Get CSRF Token and Cookie Headers
+  (call-interactively 'sweetgreen//auth [sweetgreen--username sweetgreen--password])
+  ;; Get Current Restaurant and Item to Buy
+  (if sweeetgreens--default-restaurant
+      (sweetgreen/helm-menu sweeetgreens--default-restaurant)
+    (let* ((curr-restaurant    (call-interactively 'sweetgreen/helm-restaurants))
+           (curr-restaurant-id (number-to-string (=> curr-restaurant 'id)))
+           (curr-product       (sweetgreen/helm-menu curr-restaurant-id)))
+
+      (print curr-restaurant)
+      (sweetgreen/add-to-cart curr-product)
+      )
+    )
+  )
 
 (defun sweetgreen/helm-restaurants (zip_code)
   (interactive "sZip Code: ")
-  ;; (print zip_code)
-  (setq sweetgreen--restaurants-alist (sweetgreen//get-restaurants zip_code))
-  (helm
-   :sources `((name . "Sweetgreen Restaurants")
-              (candidates . ,(mapcar 'cdr sweetgreen--restaurants-alist))
-              (action . (lambda (f)
-                          (setq sweetgreen--curr-restaurant
-                                (car (rassoc f sweetgreen--restaurants-alist)))
-                          (message "You selected %s" (=> sweetgreen--restaurants-alist sweetgreen--curr-restaurant))
-                          )))
-   :buffer "✷Sweetgreen ❤ Restaurants✷"))
+  (let* ((restaurant-alist (sweetgreen//get-restaurants zip_code))
+         )
+    (setq sweetgreen--restaurants-alist restaurant-alist)
+    (helm
+     :sources
+     (helm-build-sync-source "Sweetgreen Restaurants"
+
+       :candidates restaurant-alist
+       :candidate-transformer (lambda (candidates)
+                                (--map
+                                 `(,(format
+                                     "%+25s     ---->     %.2f miles away"
+                                     (=> (cdr it) 'name) (=> (cdr it) 'distance))
+                                   . ,it)
+                                 candidates)
+                                )
+       :persistent-action (lambda (selected_restaurant)
+                            (browse-url
+                             (concat "https://order.sweetgreen.com/"
+                                     (=> selected_restaurant 'restaurant_slug))))
+       :action (lambda (candidate)
+                 (setq sweetgreen--curr-restaurant candidate)
+                 (print candidate)))
+     :buffer "✷Sweetgreen ❤ Restaurants✷")))
 
 (defun sweetgreen/helm-menu (restaurant_id)
-  ;; (print zip_code)
+  (unless restaurant_id
+    (error "No Restaurant ID specified"))
   (setq sweetgreen--menu-alist (sweetgreen//get-menu restaurant_id))
   (helm
-   :sources (make-sources restaurant_id)
+   :sources (sweetgreens//make-helm-menu-sources restaurant_id)
    :buffer "✷Sweetgreen ❤ Menu List✷"))
 
-(sweetgreen/helm-menu "26")
-
-(defun make-sources (restaurant_id)
+(defun sweetgreens//make-helm-menu-sources (restaurant_id)
   (-map (lambda (menu)
           (let* ((name (upcase-initials (car menu)))
                  (menu-list (cdr menu))
@@ -73,28 +153,30 @@
                                     menu-list)))
             (helm-build-sync-source name
               :candidates menu-alist
+              :persistent-action (lambda (candidate)
+                                   (browse-url
+                                    (concat "https://order.sweetgreen.com/nolita/"
+                                            (=> candidate 'product_slug))))
               :action (lambda (candidate)
-                        (print candidate)))))
+                        (print candidate)
+                        candidate))))
         sweetgreen--menu-alist))
-
 
 (defun sweetgreen//get-restaurants (zip_code)
   (when (and sweetgreen--csrf-token
              sweetgreen--cookie-string)
-    (let* ((restaurants-response (request
-                                  "https://order.sweetgreen.com/api/restaurants"
-                                  :type "GET"
-                                  :sync t
-                                  :params `(("zip_code" . ,zip_code))
-                                  :headers `(("Cookie" . ,sweetgreen--cookie-string)
-                                             ("X-CSRF-Token" . ,sweetgreen--csrf-token))
-                                  :parser 'json-read))
-           (restaurants-data     (request-response-data restaurants-response))
-           (restaurants          (=> restaurants-data 'restaurants)))
-      (--map `(,(=> it 'id) .
-               ,(format "%+25s     ---->     %.2f miles away"
-                       (=> it 'name) (=> it 'distance)))
-             restaurants))))
+    (let* ((response    (request
+                         "https://order.sweetgreen.com/api/restaurants"
+                         :type "GET"
+                         :sync t
+                         :params `(("zip_code" . ,zip_code))
+                         :headers `(("Cookie" . ,sweetgreen--cookie-string)
+                                    ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+                         :parser 'json-read))
+           (data        (request-response-data response))
+           (restaurants (--map `(,(number-to-string (=> it 'id)) . ,it)
+                               (=> data 'restaurants))))
+      restaurants)))
 
 (defun sweetgreen//get-menu (restaurant_id)
   (when (and sweetgreen--csrf-token
@@ -109,75 +191,53 @@
                            :parser 'json-read))
            (menu-data     (request-response-data menu-response))
            (products      (append (=> menu-data 'products) nil))
-           (menu (--group-by (=> it 'category_name) le-menu)))
+           (menu (--group-by (=> it 'category_name) products)))
       menu)))
 
-;; Get CSRF Token
-(request
- "https://order.sweetgreen.com"
- :parser (lambda ()
-           (let ((data (buffer-string)))
-             (string-match sweetgreen--csrf-token-regexp data)
-             (let ((token (match-string 1 data)))
-               (setq sweetgreen--csrf-token token))))
- :complete (lambda (&rest _) (message "CSRF Token: %s" sweetgreen--csrf-token)))
-
-;; Get Session Cookie
-(request
- "https://order.sweetgreen.com/api/customers/login"
- :type "POST"
- :data `(("customer[email]" . ,username)
-         ("customer[password]" . ,passwd))
- :headers '(("Content-Type" . "application/x-www-form-urlencoded; charset=UTF-8"))
- :parser 'buffer-string
- :complete (function*
-            (lambda (&key data response &allow-other-keys)
-              (let ((cookie-header (request-response-header response "set-cookie")))
-                (string-match sweetgreen--cookie-regexp cookie-header)
-
-                (setq sweetgreen--cookie-string (concat "_session_id="
-                                         (match-string 1 cookie-header)))
-                (message "Cookie collected: %s" sweetgreen--cookie-string)))))
-
 ;; Add Item to cart
-(request
- "https://order.sweetgreen.com/api/line_items"
- :type "POST"
+(defun sweetgreen/add-to-cart (product)
+  (request
+   "https://order.sweetgreen.com/api/line_items"
+   :type "POST"
+   :data (json-encode `(("line_item" . (("quantity" . 1)
+                                        ("product_id" . ,(=> product 'id))
+                                        ("restaurant_id" . ,(=> product 'restaurant_id))
+                                        ("calories" . ,(=> product 'calories))
+                                        )
+                         )))
+   :headers `(("Content-Type" . "application/json")
+              ("Cookie" . ,sweetgreen--cookie-string)
+              ("X-CSRF-Token" . ,sweetgreen--csrf-token))
 
- :data (json-encode `(("line_item" . (("quantity" . 1)
-                                      ("product_id" . 1947)
-                                      ("restaurant_id" . 26)
-                                      ("calories" . 410)))))
- :headers `(("Content-Type" . "application/json")
-            ("Cookie" . ,sweetgreen--cookie-string)
-            ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+   :parser 'json-read
+   :complete (function*
+              (lambda (&key data response &allow-other-keys)
+                (let* ((item     (=> data 'line_item))
+                       (item_id  (=> item 'id))
+                       (order_id (=> item 'ignored_order_id)))
+                  (setq order-id (number-to-string order_id))
+                  (push `(,item_id . ,item) items))))))
 
- :parser 'json-read
- :complete (function*
-            (lambda (&key data response &allow-other-keys)
-              (let* ((item     (=> data 'line_item))
-                     (item_id  (=> item 'id))
-                     (order_id (=> item 'ignored_order_id)))
-                (setq order-id (number-to-string order_id))
-                (push `(,item_id . ,item) items)))))
 
 ;; Get basket Id
-(request
- "https://order.sweetgreen.com/api/orders"
- :type "GET"
- :params `(("id" . ,order-id))
- :headers `(("Content-Type" . "application/json")
-            ("Cookie" . ,sweetgreen--cookie-string)
-            ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+(defun sweetgreen//fetch-basket-id ()
+  (let* ((response  (request
+                     "https://order.sweetgreen.com/api/orders"
+                     :type    "GET"
+                     :sync    t
+                     :params  `(("id" . ,order-id))
+                     :headers `(("Content-Type" . "application/json")
+                                ("Cookie" . ,sweetgreen--cookie-string)
+                                ("X-CSRF-Token" . ,sweetgreen--csrf-token))
 
- :parser 'json-read
- :complete (function*
-            (lambda (&key data response &allow-other-keys)
-              (let* ((order     (aref (=> data 'orders) 0))
-                     (basket_id (=> order 'basket_id)))
-                (setq basket-id basket_id)
-                (push `(,basket_id . ,order) orders))))
- )
+                     :parser 'json-read
+                     :error
+                     (function* (lambda (&key error-thrown &allow-other-keys&rest _)
+                                  (error "Got error: %S" error-thrown)))))
+         (data       (request-response-data response))
+         (order      (aref (=> data 'orders) 0))
+         (basket_id (=> order 'basket_id)))
+    (push `(,basket_id . ,order) orders)))
 
 (defun cancel-item (id)
   (request
