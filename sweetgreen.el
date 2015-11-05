@@ -1,19 +1,60 @@
 ;; -*- lexical-binding: t -*-
+;;; sweetgreen.el --- Order Salads from https://sweetgreen.com from inside Emacs
+
+;; Copyright (C) 2015 Diego Berrocal
+
+;; Author: Diego Berrocal <cestdiego@gmail.com>
+;; Created: 3 November 2015
+
+;; Keywords: salad, food, sweetgreen, request
+;; Homepage: http://www.github.com/CestDiego/sweetgreen.el/
+;; Version: 0.0.1
+;; Package-Requires: ((dash "2.12.1") (helm "1.5.6) (request "0.2.0"))
+
+;; This file is not part of GNU Emacs.
+
+;;; License:
+;;
+;; This file is NOT part of GNU Emacs.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License
+;; as published by the Free Software Foundation; either version 2
+;; of the License, or (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+
+;;; Commentary:
+
+;; Give your Emacs the power to order salads and leave a healthier lifestyle,
+;; don't forget to also exercise!
+
+;;; Code:
 
 (require 'request)
-(require 'rx)
 (require 'dash)
 (require 'helm)
+
+(defgroup sweetgreen nil
+  "Order a variety of products from Sweetgreen without leaving your editor."
+  :group 'sweetgreen)
+
+(defcustom sweetgreen--username nil
+  "Sweetgreen Accounr Username"
+  :type 'string
+  :group 'sweetgreen)
+(defvar sweetgreen--password nil
+  "Sweetgreen Account Password")
 
 (defvar sweetgreen--csrf-token-regexp "<meta content=\"\\([^\"]+\\).*?csrf-token.*?>"
   "Regular Expression used to grab the CSRF Token from the index page.")
 
 (defvar sweetgreen--cookie-regexp "_session_id=\\([^;]+\\)"
   "Regular expression to get the Session ID from the response's headers.")
-(defvar sweetgreen--username ""
-  "Username for http://orders.sweetgreen.com")
-(defvar sweetgreen--password ""
-  "Password for http://orders.sweetgreen.com")
 
 (defvar sweetgreen--csrf-token ""
   "CSRF Token for http://orders.sweetgreen.com")
