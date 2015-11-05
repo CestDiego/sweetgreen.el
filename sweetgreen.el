@@ -66,16 +66,20 @@
 
 (defvar sweetgreen--menu-alist '()
   "Menu for Current restaurant")
+(defvar sweetgreen--products-alist '()
+  "Menu for Current restaurant")
 (defvar sweetgreen--curr-restaurant nil
   "Current Restaurant")
 
-(defvar sweeetgreens--default-restaurant nil
+(defvar sweeetgreen--curr-restaurant nil
   "Default restaurant id")
 
-(defvar order-id nil)
-(defvar items '())
-(defvar orders '())
-(defvar order-id nil)
+(defvar sweetgreen--available-times nil)
+
+(defvar sweetgreen--items-alist '())
+(defvar sweetgreen--orders '())
+(defvar sweetgreen--curr-order-id nil)
+(defvar sweetgreen--curr-basket-id nil)
 (defvar basket-id nil)
 
 (defun => (alist &rest keys)
@@ -86,15 +90,13 @@
 
 (defun sweetgreen//auth (&optional username password)
   (interactive)
-  (if (and sweetgreen--username username)
-      (setq sweetgreen--username (read-from-minibuffer "Username: "))
-    (setq sweetgreen--username username))
-  (if (and sweetgreen--password password)
-      (setq sweetgreen--password (read-passwd "Super Secret Password: "))
-    (setq sweetgreen--password password))
-
+  (unless sweetgreen--username (setq sweetgreen--username
+                                     (read-from-minibuffer "Username: ")))
+  (unless sweetgreen--password (setq sweetgreen--password
+                                     (read-passwd "Super Secret Password: ")))
   (sweetgreen//fetch-csrf-token)
-  (sweetgreen//fetch-auth-cookie username password))
+  (sweetgreen//fetch-auth-cookie username password)
+  )
 
 (defun sweetgreen//fetch-csrf-token ()
   (let* ((response (request
@@ -103,7 +105,7 @@
                    :sync t
                    :parser 'buffer-string
                    :error
-                   (function* (lambda (&key error-thrown &allow-other-keys&rest _)
+                   (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
                                 (error "Got error: %S" error-thrown)))
                    ))
         (data  (request-response-data response))
@@ -122,7 +124,7 @@
                     :headers '(("Content-Type" . "application/x-www-form-urlencoded; charset=UTF-8"))
                     :parser 'buffer-string
                     :error
-                    (function* (lambda (&key error-thrown &allow-other-keys&rest _)
+                    (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
                                  (error "Got error: %S" error-thrown)))
                     ))
          (header (request-response-header response "set-cookie"))
@@ -131,22 +133,28 @@
                           (concat "_session_id=" (match-string 1 header)))))
     (setq sweetgreen--cookie-string cookie-string)))
 
-(defun sweetgreen ()
-  (interactive)
+(defun sweetgreen (args)
+  (interactive "P")
+  (when args
+    (setq sweetgreen--curr-restaurant nil))
   ;; Get CSRF Token and Cookie Headers
-  (call-interactively 'sweetgreen//auth [sweetgreen--username sweetgreen--password])
+  (call-interactively 'sweetgreen//auth)
   ;; Get Current Restaurant and Item to Buy
-  (if sweeetgreens--default-restaurant
-      (sweetgreen/helm-menu sweeetgreens--default-restaurant)
+  (if sweetgreen--curr-restaurant
+      (let* ((curr-product       (sweetgreen/helm-menu
+                                  (number-to-string
+                                   (=> sweetgreen--curr-restaurant 'id))))
+             (confirmed-product  (sweetgreen/confirm-product curr-product)))
+        (when confirmed-product (sweetgreen//order-product curr-product)))
     (let* ((curr-restaurant    (call-interactively 'sweetgreen/helm-restaurants))
            (curr-restaurant-id (number-to-string (=> curr-restaurant 'id)))
-           (curr-product       (sweetgreen/helm-menu curr-restaurant-id)))
+           (curr-product       (sweetgreen/helm-menu curr-restaurant-id))
+           (confirmed-product  (sweetgreen/confirm-product curr-product)))
+      (when confirmed-product (sweetgreen//order-product curr-product)))))
 
-      (print curr-restaurant)
-      (sweetgreen/add-to-cart curr-product)
-      )
-    )
-  )
+;; (defun sweetgreen//order-product (product)
+;;   (let ((order (sweetgreen//fetch-))))
+;;   )
 
 (defun sweetgreen/helm-restaurants (zip_code)
   (interactive "sZip Code: ")
@@ -171,19 +179,26 @@
                              (concat "https://order.sweetgreen.com/"
                                      (=> selected_restaurant 'restaurant_slug))))
        :action (lambda (candidate)
-                 (setq sweetgreen--curr-restaurant candidate)
-                 (print candidate)))
+                 (setq sweetgreen--curr-restaurant candidate)))
      :buffer "✷Sweetgreen ❤ Restaurants✷")))
+
+(defun sweetgreen/helm-wanted-time (order_id)
+  (unless restaurant_id
+    (error "No Restaurant ID specified"))
+  (setq sweetgreen--menu-alist (sweetgreen//get-menu restaurant_id))
+  (helm
+   :sources (sweetgreen//make-helm-menu-sources restaurant_id)
+   :buffer "✷Sweetgreen ❤ Menu List✷"))
 
 (defun sweetgreen/helm-menu (restaurant_id)
   (unless restaurant_id
     (error "No Restaurant ID specified"))
   (setq sweetgreen--menu-alist (sweetgreen//get-menu restaurant_id))
   (helm
-   :sources (sweetgreens//make-helm-menu-sources restaurant_id)
+   :sources (sweetgreen//make-helm-menu-sources restaurant_id)
    :buffer "✷Sweetgreen ❤ Menu List✷"))
 
-(defun sweetgreens//make-helm-menu-sources (restaurant_id)
+(defun sweetgreen//make-helm-menu-sources (restaurant_id)
   (-map (lambda (menu)
           (let* ((name (upcase-initials (car menu)))
                  (menu-list (cdr menu))
@@ -199,9 +214,9 @@
                                     (concat "https://order.sweetgreen.com/nolita/"
                                             (=> candidate 'product_slug))))
               :action (lambda (candidate)
-                        (print candidate)
                         candidate))))
         sweetgreen--menu-alist))
+(sweetgreen//get-menu "26")
 
 (defun sweetgreen//get-restaurants (zip_code)
   (when (and sweetgreen--csrf-token
@@ -215,7 +230,7 @@
                                     ("X-CSRF-Token" . ,sweetgreen--csrf-token))
                          :parser 'json-read))
            (data        (request-response-data response))
-           (restaurants (--map `(,(number-to-string (=> it 'id)) . ,it)
+           (restaurants (--map `(,(=> it 'id) . ,it)
                                (=> data 'restaurants))))
       restaurants)))
 
@@ -233,35 +248,33 @@
            (menu-data     (request-response-data menu-response))
            (products      (append (=> menu-data 'products) nil))
            (menu (--group-by (=> it 'category_name) products)))
+      (setq sweetgreen--products-alist (--map `(,(=> it 'id) . ,it) products))
       menu)))
 
-;; Add Item to cart
-(defun sweetgreen/add-to-cart (product)
-  (request
-   "https://order.sweetgreen.com/api/line_items"
-   :type "POST"
-   :data (json-encode `(("line_item" . (("quantity" . 1)
-                                        ("product_id" . ,(=> product 'id))
-                                        ("restaurant_id" . ,(=> product 'restaurant_id))
-                                        ("calories" . ,(=> product 'calories))
-                                        )
-                         )))
-   :headers `(("Content-Type" . "application/json")
-              ("Cookie" . ,sweetgreen--cookie-string)
-              ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+(defun sweetgreen//add-to-cart (product)
+  (let* ((response      (request
+                         "https://order.sweetgreen.com/api/line_items"
+                         :type "POST"
+                         :sync t
+                         :data (json-encode
+                                `(("line_item" . (("quantity" . 1)
+                                                  ("product_id" . ,(=> product 'id))
+                                                  ("restaurant_id" . ,(=> product 'restaurant_id))
+                                                  ("calories" . ,(=> product 'calories))))))
+                         :headers `(("Content-Type" . "application/json")
+                                    ("Cookie" . ,sweetgreen--cookie-string)
+                                    ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+                         :parser 'json-read))
+         (data          (request-response-data response))
+         (item          (=> data 'line_item))
+         (item_id       (=> item 'id))
+         (order_id      (=> item 'ignored_order_id))
+         (fetched_order (sweetgreen//fetch-basket-id (number-to-string order_id))))
+    (push `(,item_id . ,item) sweetgreen--items-alist)
+    (setq sweetgreen--curr-order-id (number-to-string order_id))
+    fetched_order))
 
-   :parser 'json-read
-   :complete (function*
-              (lambda (&key data response &allow-other-keys)
-                (let* ((item     (=> data 'line_item))
-                       (item_id  (=> item 'id))
-                       (order_id (=> item 'ignored_order_id)))
-                  (setq order-id (number-to-string order_id))
-                  (push `(,item_id . ,item) items))))))
-
-
-;; Get basket Id
-(defun sweetgreen//fetch-basket-id ()
+(defun sweetgreen//fetch-basket-id (order-id)
   (let* ((response  (request
                      "https://order.sweetgreen.com/api/orders"
                      :type    "GET"
@@ -273,27 +286,103 @@
 
                      :parser 'json-read
                      :error
-                     (function* (lambda (&key error-thrown &allow-other-keys&rest _)
+                     (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
                                   (error "Got error: %S" error-thrown)))))
          (data       (request-response-data response))
-         (order      (aref (=> data 'orders) 0))
-         (basket_id (=> order 'basket_id)))
-    (push `(,basket_id . ,order) orders)))
+         (order      (aref (=> data 'orders) 0)))
+    (setq sweetgreen--curr-basket-id (=> order 'basket_id))
+    (setq sweetgreen--available-times (=> order 'available_wanted_times_tuples))
+    (push `(,basket_id . ,(list order)) sweetgreen--orders)
+    ))
+
+;; (sweetgreen//fetch-basket-id sweetgreen--c urr-order-id)
+;; (print sweetgreen--orders)
+;; (setq le-order (car (cdr (car sweetgreen--orders))))
+;; (setq le-product (cdr (car sweetgreen--products-alist)))
+
+(defun sweetgreen/confirm-product (product)
+  (let* ((name     (upcase-initials (=> product 'name)))
+        (restaurant (=> sweetgreen--restaurants-alist (=> product 'restaurant_id)))
+        (location (=> restaurant 'name))
+        (address (concat (=> restaurant 'address) ", " (=> restaurant 'state)))
+        (instructions (=> restaurant 'pickup_instructions))
+        (random-pun (nth (random 4) '("Orange you glad you use Emacs?"
+                                      "Do you like to party?? Lettuce turnip the beet!"
+                                      "Don't forget to lettuce know if you came from RC"
+                                      "Romaine calm! You haven't order your salad yet.")) )
+        (cost     (/ (=> product 'cost) 100))
+        (calories (=> product 'calories)))
+    (y-or-n-p
+     (format
+      "%s
+You are buying the %s
+At the %s location @ %s
+%s
+Price before Taxes is $%.2f
+It contains %.0f calories
+Confirm your order? "
+      random-pun
+      name
+      location
+      address
+      instructions
+      cost
+      calories))))
+
+;; (sweetgreen/confirm-product le-product)
+
+;; (defun sweetgreen/confirm-product (order)
+;;   (let* ((item_ids (=> order 'line_item_ids))
+;;          (ingredient-list (-map
+;;                            (lambda (it)
+;;                              (when (=> sweetgreen--items-alist  it)
+;;                                (format "- %s ->  %.2f"
+;;                                        (upcase-initials
+;;                                         (=> sweetgreen--products-alist
+;;                                            (=> sweetgreen--items-alist
+;;                                               it
+;;                                               'product_id)
+;;                                            'name))
+;;                                        (/ (=> sweetgreen--items-alist
+;;                                              it
+;;                                              'static_cost)
+;;                                           100))))
+;;                            (=> order 'line_item_ids))
+;;                           ))
+;;     (message (format
+;;      "Current order costs: $ %.2f
+;; It has the following items:
+;; %s
+;; "
+;;      (/ (=> order 'total) 100)
+;;      (mapconcat 'identity  ingredient-list "\n")
+;;      ))
+;;     )
+;;   t
+;;   )
+;; (=> le-order 'line_item_ids)
+;; (=> sweetgreen--items-alist 611989 'static_cost)
+;; (sweetgreen/confirm-product le-order)
 
 (defun cancel-item (id)
-  (request
-   (concat "https://order.sweetgreen.com/api/line_items/" (number-to-string id))
-   :type "DELETE"
-   :headers `(("Cookie" . ,(concat "_session_id=" sweetgreen--cookie-string))
-              ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+  (let ((request-url (concat "https://order.sweetgreen.com/api/line_items/"
+                             (number-to-string id))))
+    (request
+     request-url
+     :type "DELETE"
+     :headers `(("Cookie" . ,(concat "_session_id=" sweetgreen--cookie-string))
+                ("X-CSRF-Token" . ,sweetgreen--csrf-token))
 
-   :parser 'json-read
-   :status-code '((204 . (lambda (&rest _) (message "Deleted item successfully")))
-                  (500 . (lambda (&rest _) (message "Item doesn't seem to exist"))))))
+     :status-code '((204 . (lambda (&rest _) (message "Deleted item successfully")))
+                    (500 . (lambda (&rest _) (message "Item doesn't seem to exist")))))))
 
+(defun cancel-orders (order)
+  (let ((item_ids (=> order 'line_item_ids)))
+    (--map (cancel-item it) item_ids)))
+;; (cancel-orders le-order)
 
 (defun checkout (order)
-  (setq order (=> orders basket-id))
+  (setq order (=> sweetgreen--orders basket-id))
   (request
    (concat "https://order.sweetgreen.com/api/line_items/" (=> order 'id))
    :type "PUT"
