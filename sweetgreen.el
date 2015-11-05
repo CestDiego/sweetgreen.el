@@ -77,7 +77,7 @@
 (defvar sweetgreen--available-times nil)
 
 (defvar sweetgreen--items-alist '())
-(defvar sweetgreen--orders '())
+(defvar sweetgreen--curr-basket '())
 (defvar sweetgreen--curr-order-id nil)
 (defvar sweetgreen--curr-basket-id nil)
 (defvar basket-id nil)
@@ -87,6 +87,24 @@
 
 ;; (url-hexify-string "455 broadway")
 ;; (setq json-object-type "hash-table")
+(defun sweetgreen (args)
+  (interactive "P")
+  (when args
+    (setq sweetgreen--curr-restaurant nil))
+  ;; Get CSRF Token and Cookie Headers
+  (call-interactively 'sweetgreen//auth)
+  ;; Get Current Restaurant and Item to Buy
+  (if sweetgreen--curr-restaurant
+      (let* ((curr-product       (sweetgreen/helm-menu
+                                  (number-to-string
+                                   (=> sweetgreen--curr-restaurant 'id))))
+             (confirmed-product  (sweetgreen/confirm-product curr-product)))
+        (when confirmed-product (sweetgreen//order-product curr-product)))
+    (let* ((curr-restaurant    (call-interactively 'sweetgreen/helm-restaurants))
+           (curr-restaurant-id (number-to-string (=> curr-restaurant 'id)))
+           (curr-product       (sweetgreen/helm-menu curr-restaurant-id))
+           (confirmed-product  (sweetgreen/confirm-product curr-product)))
+      (when confirmed-product (sweetgreen//order-product curr-product)))))
 
 (defun sweetgreen//auth (&optional username password)
   (interactive)
@@ -133,29 +151,6 @@
                           (concat "_session_id=" (match-string 1 header)))))
     (setq sweetgreen--cookie-string cookie-string)))
 
-(defun sweetgreen (args)
-  (interactive "P")
-  (when args
-    (setq sweetgreen--curr-restaurant nil))
-  ;; Get CSRF Token and Cookie Headers
-  (call-interactively 'sweetgreen//auth)
-  ;; Get Current Restaurant and Item to Buy
-  (if sweetgreen--curr-restaurant
-      (let* ((curr-product       (sweetgreen/helm-menu
-                                  (number-to-string
-                                   (=> sweetgreen--curr-restaurant 'id))))
-             (confirmed-product  (sweetgreen/confirm-product curr-product)))
-        (when confirmed-product (sweetgreen//order-product curr-product)))
-    (let* ((curr-restaurant    (call-interactively 'sweetgreen/helm-restaurants))
-           (curr-restaurant-id (number-to-string (=> curr-restaurant 'id)))
-           (curr-product       (sweetgreen/helm-menu curr-restaurant-id))
-           (confirmed-product  (sweetgreen/confirm-product curr-product)))
-      (when confirmed-product (sweetgreen//order-product curr-product)))))
-
-;; (defun sweetgreen//order-product (product)
-;;   (let ((order (sweetgreen//fetch-))))
-;;   )
-
 (defun sweetgreen/helm-restaurants (zip_code)
   (interactive "sZip Code: ")
   (let* ((restaurant-alist (sweetgreen//get-restaurants zip_code))
@@ -196,7 +191,8 @@
   (setq sweetgreen--menu-alist (sweetgreen//get-menu restaurant_id))
   (helm
    :sources (sweetgreen//make-helm-menu-sources restaurant_id)
-   :buffer "✷Sweetgreen ❤ Menu List✷"))
+   :buffer "✷Sweetgreen ❤ Menu List✷")
+  )
 
 (defun sweetgreen//make-helm-menu-sources (restaurant_id)
   (-map (lambda (menu)
@@ -216,7 +212,7 @@
               :action (lambda (candidate)
                         candidate))))
         sweetgreen--menu-alist))
-(sweetgreen//get-menu "26")
+
 
 (defun sweetgreen//get-restaurants (zip_code)
   (when (and sweetgreen--csrf-token
@@ -269,12 +265,12 @@
          (item          (=> data 'line_item))
          (item_id       (=> item 'id))
          (order_id      (=> item 'ignored_order_id))
-         (fetched_order (sweetgreen//fetch-basket-id (number-to-string order_id))))
+         (curr_basket (sweetgreen//fetch-basket (number-to-string order_id))))
     (push `(,item_id . ,item) sweetgreen--items-alist)
     (setq sweetgreen--curr-order-id (number-to-string order_id))
-    fetched_order))
+    curr_basket))
 
-(defun sweetgreen//fetch-basket-id (order-id)
+(defun sweetgreen//fetch-basket (order-id)
   (let* ((response  (request
                      "https://order.sweetgreen.com/api/orders"
                      :type    "GET"
@@ -292,13 +288,9 @@
          (order      (aref (=> data 'orders) 0)))
     (setq sweetgreen--curr-basket-id (=> order 'basket_id))
     (setq sweetgreen--available-times (=> order 'available_wanted_times_tuples))
-    (push `(,basket_id . ,(list order)) sweetgreen--orders)
+    ;; (push `(,(=> order 'basket_id) . ,(list order)) sweetgreen--orders)
+    (setq sweetgreen--curr-basket order)
     ))
-
-;; (sweetgreen//fetch-basket-id sweetgreen--c urr-order-id)
-;; (print sweetgreen--orders)
-;; (setq le-order (car (cdr (car sweetgreen--orders))))
-;; (setq le-product (cdr (car sweetgreen--products-alist)))
 
 (defun sweetgreen/confirm-product (product)
   (let* ((name     (upcase-initials (=> product 'name)))
@@ -329,40 +321,33 @@ Confirm your order? "
       cost
       calories))))
 
-;; (sweetgreen/confirm-product le-product)
+(defun sweetgreen//order-product (product)
+  (let* ((basket (sweetgreen//add-to-cart product))
+         (wanted_time (sweetgreen//select-time basket)))
+    (message wanted_time)
+    )
+  )
+;; (sweetgreen//fetch-basket sweetgreen--c urr-order-id)
+;; (print sweetgreen--curr-basket)
+;; (setq le-order (car (cdr (car sweetgreen--curr-basket))))
+;; (setq le-product (cdr (car sweetgreen--products-alist)))
 
-;; (defun sweetgreen/confirm-product (order)
-;;   (let* ((item_ids (=> order 'line_item_ids))
-;;          (ingredient-list (-map
-;;                            (lambda (it)
-;;                              (when (=> sweetgreen--items-alist  it)
-;;                                (format "- %s ->  %.2f"
-;;                                        (upcase-initials
-;;                                         (=> sweetgreen--products-alist
-;;                                            (=> sweetgreen--items-alist
-;;                                               it
-;;                                               'product_id)
-;;                                            'name))
-;;                                        (/ (=> sweetgreen--items-alist
-;;                                              it
-;;                                              'static_cost)
-;;                                           100))))
-;;                            (=> order 'line_item_ids))
-;;                           ))
-;;     (message (format
-;;      "Current order costs: $ %.2f
-;; It has the following items:
-;; %s
-;; "
-;;      (/ (=> order 'total) 100)
-;;      (mapconcat 'identity  ingredient-list "\n")
-;;      ))
-;;     )
-;;   t
-;;   )
-;; (=> le-order 'line_item_ids)
-;; (=> sweetgreen--items-alist 611989 'static_cost)
-;; (sweetgreen/confirm-product le-order)
+
+(defun sweetgreen//select-time (order)
+  (unless order
+    (error "You have given no order to select time"))
+  (let ((available-times (--map `(,(=> it 'formatted) . ,(=> it 'original))
+                                (=> order 'available_wanted_times_tuples))))
+    (helm
+     :sources (helm-build-sync-source "Available pickup times"
+                :candidates available-times
+                :action 'identity)
+     :buffer "✷Sweetgreen ❤ Available Pickup Times  ✷"
+     )
+    )
+  )
+
+;; (sweetgreen//select-time le-order)
 
 (defun cancel-item (id)
   (let ((request-url (concat "https://order.sweetgreen.com/api/line_items/"
@@ -382,7 +367,7 @@ Confirm your order? "
 ;; (cancel-orders le-order)
 
 (defun checkout (order)
-  (setq order (=> sweetgreen--orders basket-id))
+  (setq order (=> sweetgreen--curr-basket basket-id))
   (request
    (concat "https://order.sweetgreen.com/api/line_items/" (=> order 'id))
    :type "PUT"
