@@ -1,0 +1,6 @@
+* Sweetgreen.el
+
+Have you ever wanted to just order your salad without leaving your favorite
+editor? Now you can!
+
+[[file:sweetgreen.png]]

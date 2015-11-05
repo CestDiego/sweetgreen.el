@@ -78,7 +78,8 @@
 
 (defvar sweetgreen--items-alist '())
 (defvar sweetgreen--curr-basket '())
-(defvar sweetgreen--curr-order-id nil)
+(defvar sweetgreen--curr-user      nil)
+(defvar sweetgreen--curr-order-id  nil)
 (defvar sweetgreen--curr-basket-id nil)
 (defvar basket-id nil)
 
@@ -139,17 +140,39 @@
                     :sync t
                     :data `(("customer[email]" . ,username)
                             ("customer[password]" . ,password))
-                    :headers '(("Content-Type" . "application/x-www-form-urlencoded; charset=UTF-8"))
-                    :parser 'buffer-string
+                    :headers '(("Accept"       . "application/json")
+                               ("Content-Type" . "application/x-www-form-urlencoded"))
+                    :parser 'json-read
                     :error
                     (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
                                  (error "Got error: %S" error-thrown)))
                     ))
          (header (request-response-header response "set-cookie"))
+         (data (request-response-data response))
          (cookie-string (progn
                           (string-match sweetgreen--cookie-regexp header)
                           (concat "_session_id=" (match-string 1 header)))))
-    (setq sweetgreen--cookie-string cookie-string)))
+    (setq sweetgreen--curr-user     (=> data 'customer) )
+    (setq sweetgreen--cookie-string cookie-string))
+  )
+
+(defun sweetgreen//fetch-logout (curr-user)
+  (let* ((response (request
+                    (format "https://order.sweetgreen.com/api/customer/%f"
+                            (=> curr-user 'id))
+                    :sync t
+                    :headers '(("Content-Type" . "application/x-www-form-urlencoded"))
+                    :parser 'buffer-string
+                    :error
+                    (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                 (error "Got error: %S" error-thrown)))))
+         (header (request-response-header response "set-cookie")))
+    (message header)
+    )
+  )
+(sweetgreen//fetch-logout sweetgreen--curr-user)
+
+(sweetgreen//fetch-auth-cookie "cestdiego@gmail.com" "SWEET056green")
 
 (defun sweetgreen/helm-restaurants (zip_code)
   (interactive "sZip Code: ")
@@ -327,10 +350,12 @@ Confirm your order? "
     (message wanted_time)
     )
   )
-;; (sweetgreen//fetch-basket sweetgreen--c urr-order-id)
-;; (print sweetgreen--curr-basket)
+(sweetgreen//fetch-basket sweetgreen--curr-order-id)
+(print sweetgreen--curr-basket)
 ;; (setq le-order (car (cdr (car sweetgreen--curr-basket))))
 ;; (setq le-product (cdr (car sweetgreen--products-alist)))
+
+;; (global-set-key (kbd "C-s-s") 'sweetgreen)
 
 
 (defun sweetgreen//select-time (order)
@@ -364,7 +389,7 @@ Confirm your order? "
 (defun cancel-orders (order)
   (let ((item_ids (=> order 'line_item_ids)))
     (--map (cancel-item it) item_ids)))
-;; (cancel-orders le-order)
+(cancel-orders sweetgreen--curr-basket)
 
 (defun checkout (order)
   (setq order (=> sweetgreen--curr-basket basket-id))
