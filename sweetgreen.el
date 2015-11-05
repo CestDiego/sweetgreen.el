@@ -158,16 +158,20 @@
 
 (defun sweetgreen//fetch-logout (curr-user)
   (let* ((response (request
-                    (format "https://order.sweetgreen.com/api/customer/%f"
-                            (=> curr-user 'id))
+                    (format "https://order.sweetgreen.com/api/customers/%.0f"
+                            (=> sweetgreen--curr-user 'id))
+                    :type "DELETE"
                     :sync t
-                    :headers '(("Content-Type" . "application/x-www-form-urlencoded"))
-                    :parser 'buffer-string
-                    :error
-                    (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                 (error "Got error: %S" error-thrown)))))
-         (header (request-response-header response "set-cookie")))
-    (message header)
+                    :headers '(("Accept"       . "application/json")
+                               ("Content-Type" . "application/x-www-form-urlencoded")
+                               ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+                    :parser 'buffer-string))
+         (header (request-response-header response "set-cookie"))
+         (cookie-string (progn
+                          (string-match sweetgreen--cookie-regexp header)
+                          (concat "_session_id=" (match-string 1 header))))
+         )
+    (setq sweetgreen--cookie-string cookie-string)
     )
   )
 (sweetgreen//fetch-logout sweetgreen--curr-user)
@@ -206,7 +210,7 @@
   (setq sweetgreen--menu-alist (sweetgreen//get-menu restaurant_id))
   (helm
    :sources (sweetgreen//make-helm-menu-sources restaurant_id)
-   :buffer "✷Sweetgreen ❤ Menu List✷"))
+   :buffer "✷Sweetgreen ❤ Wanted Time List✷"))
 
 (defun sweetgreen/helm-menu (restaurant_id)
   (unless restaurant_id
