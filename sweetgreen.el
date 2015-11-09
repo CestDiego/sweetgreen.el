@@ -6,7 +6,7 @@
 ;; Author: Diego Berrocal <cestdiego@gmail.com>
 ;; Homepage: https://www.github.com/CestDiego/sweetgreen.el
 ;; Version: 1.0.0
-;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0"bb))
+;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0"bb) (cl-lib "0.5"))
 ;; Keywords: salad, food, sweetgreen, request
 
 ;; This file is not part of GNU Emacs.
@@ -40,6 +40,7 @@
 (require 'request)
 (require 'dash)
 (require 'helm)
+(require 'cl-lib)
 
 (defgroup sweetgreen nil
   "Order a variety of products from Sweetgreen without leaving your editor."
@@ -105,8 +106,8 @@
                    :sync t
                    :parser 'buffer-string
                    :error
-                   (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                (error "Got error: %S" error-thrown)))
+                   (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                  (error "Got error: %S" error-thrown)))
                    ))
         (data  (request-response-data response))
         (csrf-token (progn
@@ -125,8 +126,8 @@
                                ("Content-Type" . "application/x-www-form-urlencoded"))
                     :parser 'json-read
                     :error
-                    (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                 (error "Got error: %S" error-thrown)))
+                    (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                   (error "Got error: %S" error-thrown)))
                     ))
          (header (request-response-header response "set-cookie"))
          (data (request-response-data response))
@@ -288,8 +289,8 @@
 
                      :parser 'json-read
                      :error
-                     (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                  (error "Got error: %S" error-thrown)))))
+                     (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                    (error "Got error: %S" error-thrown)))))
          (data       (request-response-data response))
          (order      (aref (=> data 'orders) 0)))
     (setq sweetgreen--curr-basket-id (=> order 'basket_id))
