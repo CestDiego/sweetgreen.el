@@ -1,4 +1,4 @@
-;;; sweetgreen.el --- Order Salads from https://sweetgreen.com from inside Emacs
+;;; sweetgreen.el --- Order Salads from https://sweetgreen.com from inside Emacs -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2015 Diego Berrocal
 
@@ -6,7 +6,7 @@
 ;; Author: Diego Berrocal <cestdiego@gmail.com>
 ;; Homepage: https://www.github.com/CestDiego/sweetgreen.el
 ;; Version: 1.0.0
-;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0"bb))
+;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0") (cl-lib "0.5"))
 ;; Keywords: salad, food, sweetgreen, request
 
 ;; This file is not part of GNU Emacs.
@@ -40,6 +40,8 @@
 (require 'request)
 (require 'dash)
 (require 'helm)
+(require 'cl-lib)
+(require 'json)
 
 (defgroup sweetgreen nil
   "Order a variety of products from Sweetgreen without leaving your editor."
@@ -105,8 +107,8 @@
                    :sync t
                    :parser 'buffer-string
                    :error
-                   (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                (error "Got error: %S" error-thrown)))
+                   (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                  (error "Got error: %S" error-thrown)))
                    ))
         (data  (request-response-data response))
         (csrf-token (progn
@@ -125,8 +127,8 @@
                                ("Content-Type" . "application/x-www-form-urlencoded"))
                     :parser 'json-read
                     :error
-                    (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                 (error "Got error: %S" error-thrown)))
+                    (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                   (error "Got error: %S" error-thrown)))
                     ))
          (header (request-response-header response "set-cookie"))
          (data (request-response-data response))
@@ -288,8 +290,8 @@
 
                      :parser 'json-read
                      :error
-                     (function* (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                  (error "Got error: %S" error-thrown)))))
+                     (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                    (error "Got error: %S" error-thrown)))))
          (data       (request-response-data response))
          (order      (aref (=> data 'orders) 0)))
     (setq sweetgreen--curr-basket-id (=> order 'basket_id))
@@ -366,50 +368,50 @@ Confirm your order? "
     (setq sweetgreen--curr-basket-id nil)))
 
 (defun checkout (basket wanted_time)
-  (setq data `(("order" .
-                (
-                 ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
-                 ("basket_id"                     . ,(=> basket 'basket_id))
-                 ("created_at"                    . ,(=> basket 'created_at))
-                 ("coupon_code"                   . ,(=> basket 'coupon_code))
-                 ("coupon_discount"               . ,(=> basket 'coupon_discount))
-                 ("placed_time"                   . ,(=> basket 'placed_time))
-                 ("formatted_wanted_time"         . ,(=> basket 'formatted_wanted_time))
-                 ("restaurant_id"                 . ,(=> basket 'restaurant_id))
-                 ("sales_tax"                     . ,(=> basket 'sales_tax))
-                 ("subtotal"                      . ,(=> basket 'subtotal))
-                 ("total"                         . ,(=> basket 'total))
-                 ("shows_feedback_form"           . ,(=> basket 'shows_feedback_form))
-                 ("wanted_time"                   . ,wanted_time)
-                 ("uploaded_at")
-                 ("contact_number" . "6467501189")
-                 ("state" . "complete")
-                 ("billing_account" .
-                  (
-                   ("card_type" . "cash")
-                   ("card_number")
-                   ("zip")
-                   ("last_four")
-                   ("cvv")
-                   ("expiry_month")
-                   ("expiry_year")
-                   ("description" . "sweetgreen Rewards (Pay with App)")
-                   ("save_on_file" . :json-false)))))))
-  (request
-   (concat "https://order.sweetgreen.com/api/orders/" (number-to-string (=> basket 'id)))
-   :type "PUT"
-   :headers `(("Cookie" . ,(concat "_session_id=" sweetgreen--cookie-string))
-              ("Content-Type" . "application/json")
-              ("X-CSRF-Token" . ,sweetgreen--csrf-token))
-   :data (json-encode data)
-   :parser 'json-read
-   :complete (function*
-              (lambda (&key data response &allow-other-keys)
-                (let* ((basket     (aref (=> data 'orders) 0))
-                       (basket_id (=> basket 'basket_id)))
-                  (print data)
-                  (message "Yeah salad is ordered")
-                  )))))
+  (let ((data `(("order" .
+                 (
+                  ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
+                  ("basket_id"                     . ,(=> basket 'basket_id))
+                  ("created_at"                    . ,(=> basket 'created_at))
+                  ("coupon_code"                   . ,(=> basket 'coupon_code))
+                  ("coupon_discount"               . ,(=> basket 'coupon_discount))
+                  ("placed_time"                   . ,(=> basket 'placed_time))
+                  ("formatted_wanted_time"         . ,(=> basket 'formatted_wanted_time))
+                  ("restaurant_id"                 . ,(=> basket 'restaurant_id))
+                  ("sales_tax"                     . ,(=> basket 'sales_tax))
+                  ("subtotal"                      . ,(=> basket 'subtotal))
+                  ("total"                         . ,(=> basket 'total))
+                  ("shows_feedback_form"           . ,(=> basket 'shows_feedback_form))
+                  ("wanted_time"                   . ,wanted_time)
+                  ("uploaded_at")
+                  ("contact_number" . "6467501189")
+                  ("state" . "complete")
+                  ("billing_account" .
+                   (
+                    ("card_type" . "cash")
+                    ("card_number")
+                    ("zip")
+                    ("last_four")
+                    ("cvv")
+                    ("expiry_month")
+                    ("expiry_year")
+                    ("description" . "sweetgreen Rewards (Pay with App)")
+                    ("save_on_file" . :json-false))))))))
+    (request
+     (concat "https://order.sweetgreen.com/api/orders/" (number-to-string (=> basket 'id)))
+     :type "PUT"
+     :headers `(("Cookie" . ,(concat "_session_id=" sweetgreen--cookie-string))
+                ("Content-Type" . "application/json")
+                ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+     :data (json-encode data)
+     :parser 'json-read
+     :complete (cl-function
+                (lambda (&key data response &allow-other-keys)
+                  (let* ((basket     (aref (=> data 'orders) 0))
+                         (basket_id (=> basket 'basket_id)))
+                    (print data)
+                    (message "Yeah salad is ordered")
+                    ))))))
 
 ;;;###autoload
 (defun sweetgreen (args)
@@ -437,7 +439,6 @@ Confirm your order? "
 
 ;; Local Variables:
 ;; coding: utf-8
-;; lexical-binding: t
 ;; End:
 
 ;;; sweetgreen.el ends here
