@@ -368,50 +368,50 @@ Confirm your order? "
     (setq sweetgreen--curr-basket-id nil)))
 
 (defun checkout (basket wanted_time)
-  (setq data `(("order" .
-                (
-                 ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
-                 ("basket_id"                     . ,(=> basket 'basket_id))
-                 ("created_at"                    . ,(=> basket 'created_at))
-                 ("coupon_code"                   . ,(=> basket 'coupon_code))
-                 ("coupon_discount"               . ,(=> basket 'coupon_discount))
-                 ("placed_time"                   . ,(=> basket 'placed_time))
-                 ("formatted_wanted_time"         . ,(=> basket 'formatted_wanted_time))
-                 ("restaurant_id"                 . ,(=> basket 'restaurant_id))
-                 ("sales_tax"                     . ,(=> basket 'sales_tax))
-                 ("subtotal"                      . ,(=> basket 'subtotal))
-                 ("total"                         . ,(=> basket 'total))
-                 ("shows_feedback_form"           . ,(=> basket 'shows_feedback_form))
-                 ("wanted_time"                   . ,wanted_time)
-                 ("uploaded_at")
-                 ("contact_number" . "6467501189")
-                 ("state" . "complete")
-                 ("billing_account" .
-                  (
-                   ("card_type" . "cash")
-                   ("card_number")
-                   ("zip")
-                   ("last_four")
-                   ("cvv")
-                   ("expiry_month")
-                   ("expiry_year")
-                   ("description" . "sweetgreen Rewards (Pay with App)")
-                   ("save_on_file" . :json-false)))))))
-  (request
-   (concat "https://order.sweetgreen.com/api/orders/" (number-to-string (=> basket 'id)))
-   :type "PUT"
-   :headers `(("Cookie" . ,(concat "_session_id=" sweetgreen--cookie-string))
-              ("Content-Type" . "application/json")
-              ("X-CSRF-Token" . ,sweetgreen--csrf-token))
-   :data (json-encode data)
-   :parser 'json-read
-   :complete (function*
-              (lambda (&key data response &allow-other-keys)
-                (let* ((basket     (aref (=> data 'orders) 0))
-                       (basket_id (=> basket 'basket_id)))
-                  (print data)
-                  (message "Yeah salad is ordered")
-                  )))))
+  (let ((data `(("order" .
+                 (
+                  ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
+                  ("basket_id"                     . ,(=> basket 'basket_id))
+                  ("created_at"                    . ,(=> basket 'created_at))
+                  ("coupon_code"                   . ,(=> basket 'coupon_code))
+                  ("coupon_discount"               . ,(=> basket 'coupon_discount))
+                  ("placed_time"                   . ,(=> basket 'placed_time))
+                  ("formatted_wanted_time"         . ,(=> basket 'formatted_wanted_time))
+                  ("restaurant_id"                 . ,(=> basket 'restaurant_id))
+                  ("sales_tax"                     . ,(=> basket 'sales_tax))
+                  ("subtotal"                      . ,(=> basket 'subtotal))
+                  ("total"                         . ,(=> basket 'total))
+                  ("shows_feedback_form"           . ,(=> basket 'shows_feedback_form))
+                  ("wanted_time"                   . ,wanted_time)
+                  ("uploaded_at")
+                  ("contact_number" . "6467501189")
+                  ("state" . "complete")
+                  ("billing_account" .
+                   (
+                    ("card_type" . "cash")
+                    ("card_number")
+                    ("zip")
+                    ("last_four")
+                    ("cvv")
+                    ("expiry_month")
+                    ("expiry_year")
+                    ("description" . "sweetgreen Rewards (Pay with App)")
+                    ("save_on_file" . :json-false))))))))
+    (request
+     (concat "https://order.sweetgreen.com/api/orders/" (number-to-string (=> basket 'id)))
+     :type "PUT"
+     :headers `(("Cookie" . ,(concat "_session_id=" sweetgreen--cookie-string))
+                ("Content-Type" . "application/json")
+                ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+     :data (json-encode data)
+     :parser 'json-read
+     :complete (cl-function
+                (lambda (&key data response &allow-other-keys)
+                  (let* ((basket     (aref (=> data 'orders) 0))
+                         (basket_id (=> basket 'basket_id)))
+                    (print data)
+                    (message "Yeah salad is ordered")
+                    ))))))
 
 ;;;###autoload
 (defun sweetgreen (args)
