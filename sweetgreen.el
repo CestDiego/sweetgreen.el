@@ -1,4 +1,4 @@
-;;; sweetgreen.el --- Order Salads from https://sweetgreen.com from inside Emacs
+;;; sweetgreen.el --- Order Salads from https://sweetgreen.com from inside Emacs -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2015 Diego Berrocal
 
@@ -437,7 +437,6 @@ Confirm your order? "
 
 ;; Local Variables:
 ;; coding: utf-8
-;; lexical-binding: t
 ;; End:
 
 ;;; sweetgreen.el ends here
