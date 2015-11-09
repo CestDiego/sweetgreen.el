@@ -6,7 +6,7 @@
 ;; Author: Diego Berrocal <cestdiego@gmail.com>
 ;; Homepage: https://www.github.com/CestDiego/sweetgreen.el
 ;; Version: 1.0.0
-;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0"bb) (cl-lib "0.5"))
+;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0") (cl-lib "0.5"))
 ;; Keywords: salad, food, sweetgreen, request
 
 ;; This file is not part of GNU Emacs.
