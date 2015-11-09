@@ -41,6 +41,7 @@
 (require 'dash)
 (require 'helm)
 (require 'cl-lib)
+(require 'json)
 
 (defgroup sweetgreen nil
   "Order a variety of products from Sweetgreen without leaving your editor."
