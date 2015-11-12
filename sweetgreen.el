@@ -423,17 +423,13 @@ Confirm your order? "
   ;; Get CSRF Token and Cookie Headers
   (call-interactively 'sweetgreen//auth)
   ;; Get Current Restaurant and Item to Buy
-  (if sweetgreen--curr-restaurant
-      (let* ((curr-product       (sweetgreen/helm-menu
-                                  (number-to-string
-                                   (=> sweetgreen--curr-restaurant 'id))))
-             (confirmed-product  (sweetgreen/confirm-product curr-product)))
-        (when confirmed-product  (sweetgreen//order-product curr-product)))
-    (let* ((curr-restaurant      (call-interactively 'sweetgreen/helm-restaurants))
-           (curr-restaurant-id   (number-to-string (=> curr-restaurant 'id)))
-           (curr-product         (sweetgreen/helm-menu curr-restaurant-id))
-           (confirmed-product    (sweetgreen/confirm-product curr-product)))
-      (when confirmed-product    (sweetgreen//order-product curr-product)))))
+  (let* ((curr-restaurant (or sweetgreen--curr-restaurant
+                              (call-interactively 'sweetgreen/helm-restaurants)))
+         (curr-restaurant-id (number-to-string (=> curr-restaurant 'id)))
+
+         (curr-product         (sweetgreen/helm-menu curr-restaurant-id))
+         (confirmed-product    (sweetgreen/confirm-product curr-product)))
+    (when confirmed-product    (sweetgreen//order-product curr-product))))
 
 (provide 'sweetgreen)
 
