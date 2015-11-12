@@ -172,8 +172,15 @@
        :candidate-transformer (lambda (candidates)
                                 (--map
                                  `(,(format
-                                     "%+25s     ---->     %.2f miles away"
-                                     (=> (cdr it) 'name) (=> (cdr it) 'distance))
+                                     "%+25s     ---->     %s miles away"
+                                     (propertize
+                                      (=> (cdr it) 'name)
+                                      'face
+                                      'font-lock-warning-face)
+                                     (propertize
+                                      (format "%.2f" (=> (cdr it) 'distance))
+                                      'face
+                                      'font-lock-function-name-face))
                                    . ,it)
                                  candidates)
                                 )
@@ -206,9 +213,15 @@
   (-map (lambda (menu)
           (let* ((name (upcase-initials (car menu)))
                  (menu-list (cdr menu))
-                 (menu-alist (--map `(,(format "%+35s     ---->       %.2f"
-                                               (upcase-initials (=> it 'name))
-                                               (/ (=> it 'cost) 100))
+                 (menu-alist (--map `(,(format "%+35s     ---->       %s"
+                                               (propertize
+                                                (upcase-initials (=> it 'name))
+                                                'face
+                                                'font-lock-warning-face)
+                                               (propertize
+                                                (format "%.2f" (/ (=> it 'cost) 100))
+                                                'face
+                                                'font-lock-function-name-face))
                                       . ,it)
                                     menu-list)))
             (helm-build-sync-source name
