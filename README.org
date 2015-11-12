@@ -1,6 +1,8 @@
 * Sweetgreen.el
 
+[[https://github.com/syl20bnr/spacemacs][file:https://cdn.rawgit.com/syl20bnr/spacemacs/develop/assets/spacemacs-badge.svg]]
+
 Have you ever wanted to just order your salad without leaving your favorite
 editor? Now you can!
 
-[[file:sweetgreen.png]]
+[[Sweetgreen][file:sweetgreen.png]]
