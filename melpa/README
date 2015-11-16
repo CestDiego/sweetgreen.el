@@ -1,0 +1,4 @@
+(README
+ :repo "CestDiego/sweetgreen.el"
+ :fetcher github
+ :files ("README.el" "dir" "README.info"))
