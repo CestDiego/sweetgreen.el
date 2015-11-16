@@ -1,11 +1,15 @@
 ;;; sweetgreen.el --- Order Salads from sweetgreen.com -*- lexical-binding: t -*-
 
+;; Change Log:
+;; 16-Nov-2015    Diego Berrocal
+;;    Add Org-Readme
+
 ;; Copyright (C) 2015 Diego Berrocal
 
 ;; Created: 3 November 2015
 ;; Author: Diego Berrocal <cestdiego@gmail.com>
 ;; Homepage: https://www.github.com/CestDiego/sweetgreen.el
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0") (cl-lib "0.5"))
 ;; Keywords: salad, food, sweetgreen, request
 
