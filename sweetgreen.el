@@ -176,55 +176,45 @@
 (defun sweetgreen/helm-restaurants (zip_code)
   "Helm Interface to select Sweetgreen Restaurants"
   (interactive "sZip Code: ")
-  (let* ((restaurant-alist (sweetgreen//get-restaurants zip_code))
-         )
+  (let* ((restaurant-alist (sweetgreen//get-restaurants zip_code)))
     (setq sweetgreen--restaurants-alist restaurant-alist)
-    (helm
-     :sources
-     (helm-build-sync-source "Sweetgreen Restaurants"
-
-       :candidates restaurant-alist
-       :candidate-transformer (lambda (candidates)
-                                (--map
-                                 `(,(format
-                                     "%+25s     ---->     %s miles away"
-                                     (propertize
-                                      (=> (cdr it) 'name)
-                                      'face
-                                      'font-lock-warning-face)
-                                     (propertize
-                                      (format "%.2f" (=> (cdr it) 'distance))
-                                      'face
-                                      'font-lock-function-name-face))
-                                   . ,it)
-                                 candidates)
-                                )
-       :persistent-action (lambda (selected_restaurant)
-                            (browse-url
-                             (concat "https://order.sweetgreen.com/"
-                                     (=> selected_restaurant 'restaurant_slug))))
-       :action (lambda (candidate)
-                 (setq sweetgreen--curr-restaurant candidate)))
-     :buffer "*Sweetgreen ❤ Restaurants*")))
-
-(defun sweetgreen/helm-wanted-time (order_id)
-  (unless restaurant_id
-    (error "No Restaurant ID specified"))
-  (setq sweetgreen--menu-alist (sweetgreen//get-menu restaurant_id))
-  (helm
-   :sources (sweetgreen//make-helm-menu-sources restaurant_id)
-   :buffer "*Sweetgreen ❤ Wanted Time List*"))
+    (helm :sources
+          (helm-build-sync-source "Sweetgreen Restaurants"
+            :candidates restaurant-alist
+            :candidate-transformer
+            (lambda (candidates)
+              (--map
+               `(,(format
+                   "%+25s     ---->     %s miles away"
+                   (propertize (=> (cdr it) 'name)
+                    'face 'font-lock-warning-face)
+                   (propertize (format "%.2f" (=> (cdr it) 'distance))
+                    'face 'font-lock-function-name-face))
+                 . ,it)
+               candidates)
+              )
+            :persistent-action
+            (lambda (selected_restaurant)
+              (browse-url
+               (concat "https://order.sweetgreen.com/"
+                       (=> selected_restaurant 'restaurant_slug))))
+            :action
+            (lambda (candidate)
+              (setq sweetgreen--curr-restaurant candidate))
+            )
+          :buffer "*Sweetgreen ❤ Restaurants*")))
 
 (defun sweetgreen/helm-menu (restaurant_id)
+  "Helm Interface to select Items from the Menu of a Sweetgreen Restaurant"
   (unless restaurant_id
     (error "No Restaurant ID specified"))
   (setq sweetgreen--menu-alist (sweetgreen//get-menu restaurant_id))
   (helm
    :sources (sweetgreen//make-helm-menu-sources restaurant_id)
-   :buffer "*Sweetgreen ❤ Menu List*")
-  )
+   :buffer "*Sweetgreen ❤ Menu List*"))
 
 (defun sweetgreen//make-helm-menu-sources (restaurant_id)
+  "Sources for SWEETGREEN/HELM-MENU"
   (-map (lambda (menu)
           (let* ((name (upcase-initials (car menu)))
                  (menu-list (cdr menu))
@@ -328,8 +318,7 @@
          (order      (aref (=> data 'orders) 0)))
     (setq sweetgreen--curr-basket-id (=> order 'basket_id))
     (setq sweetgreen--available-times (=> order 'available_wanted_times_tuples))
-    (setq sweetgreen--curr-basket order)
-    ))
+    (setq sweetgreen--curr-basket order)))
 
 (defun sweetgreen/confirm-product (product)
   "Build prompt with random pun and interactively confirm order"
@@ -341,7 +330,7 @@
         (random-pun (nth (random 4) '("Orange you glad you use Emacs?"
                                       "Do you like to party?? Lettuce turnip the beet!"
                                       "Don't forget to lettuce know if you came from RC"
-                                      "Romaine calm! You haven't order your salad yet.")) )
+                                      "Romaine calm! You haven't order your salad yet")) )
         (cost     (/ (=> product 'cost) 100))
         (calories (=> product 'calories)))
     (y-or-n-p
@@ -360,13 +349,6 @@ Confirm your order? "
       instructions
       cost
       calories))))
-
-(defun sweetgreen//order-product (product)
-  (let* ((basket (sweetgreen//add-to-cart product))
-         (wanted_time (sweetgreen//select-time basket)))
-    (if (y-or-n-p "really continue?")
-        (checkout basket wanted_time)
-      (cancel-orders basket))))
 
 (defun sweetgreen//helm-select-time (order)
   "Select time to pickup order"
@@ -401,9 +383,10 @@ Confirm your order? "
      :status-code '((204 . (lambda (&rest _) (message "Deleted item successfully")))
                     (500 . (lambda (&rest _) (message "Item doesn't seem to exist")))))))
 
-(defun cancel-orders (order)
+(defun sweetgreen//cancel-orders (order)
+  "Cancel all items from ORDER"
   (let ((item_ids (=> order 'line_item_ids)))
-    (--map (cancel-item it) item_ids)
+    (--map (sweetgreen//cancel-item it) item_ids)
     (setq sweetgreen--curr-basket nil)
     (setq sweetgreen--curr-basket-id nil)))
 
