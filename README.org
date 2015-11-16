@@ -13,12 +13,22 @@ editor? Now you can!
 *** sweetgreen
 =(sweetgreen ARGS)=
 
-asdfasfasdf
+Order salad from http://sweetgreen.com
+
+*** sweetgreen//auth
+=(sweetgreen//auth &optional USERNAME PASSWORD)=
+
+Authenticate USERNAME with PASSWORD to sweetgreen and get all cookies
+
+*** sweetgreen/confirm-product
+=(sweetgreen/confirm-product PRODUCT)=
+
+Build prompt with random pun and interactively confirm order
 
 *** sweetgreen/helm-restaurants
 =(sweetgreen/helm-restaurants ZIP_CODE)=
 
-asfasfsfadf
+Helm Interface to select Sweetgreen Restaurants
 
 ** Internal Functions
 
@@ -30,19 +40,28 @@ Accessor that makes it easy to traverse nested alists
 *** sweetgreen//add-to-cart
 =(sweetgreen//add-to-cart PRODUCT)=
 
-asdfasdfd
+Add PRODUCT to CURR-BASKET and to the online Shopping Cart
 
 *** sweetgreen//cancel-item
-sweetgreen//cancel-item is an alias for =sweetgreen//cancel-item=,
-which is not defined.  Please make a bug report.
+sweetgreen//cancel-item is a Lisp closure.
+
+=(sweetgreen//cancel-item ID)=
+
+Cancel Item with ID
 
 *** sweetgreen//cancel-orders
-sweetgreen//cancel-orders is an alias for =sweetgreen//cancel-orders=,
-which is not defined.  Please make a bug report.
+sweetgreen//cancel-orders is a Lisp closure.
+
+=(sweetgreen//cancel-orders ORDER)=
+
+Cancel all items from ORDER
 
 *** sweetgreen//checkout
-sweetgreen//checkout is an alias for =sweetgreen//checkout=,
-which is not defined.  Please make a bug report.
+sweetgreen//checkout is a Lisp closure.
+
+=(sweetgreen//checkout BASKET WANTED_TIME)=
+
+Checkout BASKET to be picked up at WANTED_TIME
 
 *** sweetgreen//fetch-auth-cookie
 =(sweetgreen//fetch-auth-cookie USERNAME PASSWORD)=
@@ -52,7 +71,7 @@ Login to get a session cookie
 *** sweetgreen//fetch-basket
 =(sweetgreen//fetch-basket ORDER-ID)=
 
-asfasfsfasf
+Get CURR-BASKET out of ORDER-ID
 
 *** sweetgreen//fetch-csrf-token
 =(sweetgreen//fetch-csrf-token)=
@@ -62,16 +81,17 @@ Parse CSRF-Token out of Sweetgreen's Homepage
 *** sweetgreen//get-menu
 =(sweetgreen//get-menu RESTAURANT_ID)=
 
-asdf
+Get the MENU available at RESTAURANT_id
 
 *** sweetgreen//get-restaurants
 =(sweetgreen//get-restaurants ZIP_CODE)=
 
-asdfsd
+Get Restaurants alist out of your zip code
 
 *** sweetgreen//helm-select-time
-sweetgreen//helm-select-time is an alias for =sweetgreen//helm-select-time=,
-which is not defined.  Please make a bug report.
+=(sweetgreen//helm-select-time ORDER)=
+
+Select time to pickup order
 
 *** sweetgreen//logout
 =(sweetgreen//logout CURR-USER)=
@@ -81,22 +101,17 @@ Logout CURR-USER and reset Session Cookie to =nil=.
 *** sweetgreen//make-helm-menu-sources
 =(sweetgreen//make-helm-menu-sources RESTAURANT_ID)=
 
-asdfs
+Sources for SWEETGREEN/HELM-MENU
 
 *** sweetgreen//order-product
 =(sweetgreen//order-product PRODUCT)=
 
-asdfasdfasd
-
-*** sweetgreen/confirm-product
-=(sweetgreen/confirm-product PRODUCT)=
-
-asdfasfsdf
+Contact Sweetgreen server to order product
 
 *** sweetgreen/helm-menu
 =(sweetgreen/helm-menu RESTAURANT_ID)=
 
-asdfasd
+Helm Interface to select Items from the Menu of a Sweetgreen Restaurant
 
 ** Macros
 * Variables
