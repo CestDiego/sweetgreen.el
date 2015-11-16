@@ -65,7 +65,7 @@
   "Regular Expression used to grab the CSRF Token from the index page.")
 
 (defvar sweetgreen--cookie-regexp "_session_id=\\([^;]+\\)"
-  "Regular expression to get the Session ID from the response's headers.")
+  "Regular expression to get the Session ID from the response's headers")
 
 (defvar sweetgreen--csrf-token ""
   "CSRF Token for http://orders.sweetgreen.com")
@@ -83,19 +83,26 @@
 (defvar sweetgreen--curr-restaurant nil
   "Current Restaurant")
 
-(defvar sweetgreen--available-times nil)
+(defvar sweetgreen--available-times nil
+  "Lis of times for current order")
 
-(defvar sweetgreen--items-alist '())
-(defvar sweetgreen--curr-basket '())
-(defvar sweetgreen--curr-user      nil)
-(defvar sweetgreen--curr-order-id  nil)
-(defvar sweetgreen--curr-basket-id nil)
-(defvar basket-id nil)
+(defvar sweetgreen--items-alist '()
+  "Items available in the menu for the current RESTAURANT")
+(defvar sweetgreen--curr-basket '()
+  "Current Basket or Shopping Cart")
+(defvar sweetgreen--curr-user      nil
+  "Current logged in USER")
+(defvar sweetgreen--curr-order-id  nil
+  "Last order (product added to cart) we've done")
+(defvar sweetgreen--curr-basket-id nil
+  "Current Basket or Shopping Cart ID")
 
 (defun => (alist &rest keys)
+  "Accessor that makes it easy to traverse nested alists"
   (-reduce-from (lambda (acc item) (assoc-default item acc) ) alist keys))
 
 (defun sweetgreen//auth (&optional username password)
+  "Authenticate USERNAME with PASSWORD to sweetgreen and get all cookies"
   (interactive)
   (unless sweetgreen--username (setq sweetgreen--username
                                      (read-from-minibuffer "Username: ")))
@@ -105,6 +112,7 @@
   (sweetgreen//fetch-auth-cookie username password))
 
 (defun sweetgreen//fetch-csrf-token ()
+  "Parse CSRF-Token out of Sweetgreen's Homepage"
   (let* ((response (request
                    "https://order.sweetgreen.com"
                    :type "GET"
@@ -121,6 +129,7 @@
     (setq sweetgreen--csrf-token csrf-token)))
 
 (defun sweetgreen//fetch-auth-cookie (username password)
+  "Login to get a session cookie"
   (let* ((response (request
                     "https://order.sweetgreen.com/api/customers/login"
                     :type "POST"
@@ -144,6 +153,7 @@
   )
 
 (defun sweetgreen//logout (curr-user)
+  "Logout CURR-USER and reset Session Cookie to `nil'. "
   (unless curr-user
     (error "You try to log out but you are not logged in m8"))
   (let* ((response (request
@@ -164,6 +174,7 @@
     (setq sweetgreen--cookie-string cookie-string)))
 
 (defun sweetgreen/helm-restaurants (zip_code)
+  "Helm Interface to select Sweetgreen Restaurants"
   (interactive "sZip Code: ")
   (let* ((restaurant-alist (sweetgreen//get-restaurants zip_code))
          )
@@ -240,6 +251,7 @@
 
 
 (defun sweetgreen//get-restaurants (zip_code)
+  "Get Restaurants alist out of your zip code"
   (when (and sweetgreen--csrf-token
              sweetgreen--cookie-string)
     (let* ((response    (request
@@ -256,6 +268,7 @@
       restaurants)))
 
 (defun sweetgreen//get-menu (restaurant_id)
+  "Get the MENU available at RESTAURANT_id"
   (when (and sweetgreen--csrf-token
              sweetgreen--cookie-string)
     (let* ((menu-response (request
@@ -273,6 +286,7 @@
       menu)))
 
 (defun sweetgreen//add-to-cart (product)
+  "Add PRODUCT to CURR-BASKET and to the online Shopping Cart"
   (let* ((response      (request
                          "https://order.sweetgreen.com/api/line_items"
                          :type "POST"
@@ -296,6 +310,7 @@
     curr_basket))
 
 (defun sweetgreen//fetch-basket (order-id)
+  "Get CURR-BASKET out of ORDER-ID"
   (let* ((response  (request
                      "https://order.sweetgreen.com/api/orders"
                      :type    "GET"
@@ -317,6 +332,7 @@
     ))
 
 (defun sweetgreen/confirm-product (product)
+  "Build prompt with random pun and interactively confirm order"
   (let* ((name     (upcase-initials (=> product 'name)))
         (restaurant (=> sweetgreen--restaurants-alist (=> product 'restaurant_id)))
         (location (=> restaurant 'name))
@@ -352,7 +368,8 @@ Confirm your order? "
         (checkout basket wanted_time)
       (cancel-orders basket))))
 
-(defun sweetgreen//select-time (order)
+(defun sweetgreen//helm-select-time (order)
+  "Select time to pickup order"
   (unless order
     (error "You have given no order to select time"))
   (let ((available-times (--map `(,(=> it 'formatted) . ,(=> it 'original))
@@ -361,12 +378,18 @@ Confirm your order? "
      :sources (helm-build-sync-source "Available pickup times"
                 :candidates available-times
                 :action 'identity)
-     :buffer "*Sweetgreen ❤ Available Pickup Times  *"
-     )
-    )
-  )
+     :buffer "*Sweetgreen ❤ Available Pickup Times  *")))
 
-(defun cancel-item (id)
+(defun sweetgreen//order-product (product)
+  "Contact Sweetgreen server to order product"
+  (let* ((basket (sweetgreen//add-to-cart product))
+         (wanted_time (sweetgreen//helm-select-time basket)))
+    (if (y-or-n-p "really continue?")
+        (sweetgreen//checkout basket wanted_time)
+      (sweetgreen//cancel-orders basket))))
+
+(defun sweetgreen//cancel-item (id)
+  "Cancel Item with ID"
   (let ((request-url (concat "https://order.sweetgreen.com/api/line_items/"
                              (number-to-string id))))
     (request
@@ -384,7 +407,8 @@ Confirm your order? "
     (setq sweetgreen--curr-basket nil)
     (setq sweetgreen--curr-basket-id nil)))
 
-(defun checkout (basket wanted_time)
+(defun sweetgreen//checkout (basket wanted_time)
+  "Checkout BASKET to be picked up at WANTED_TIME"
   (let ((data `(("order" .
                  (
                   ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
@@ -432,6 +456,7 @@ Confirm your order? "
 
 ;;;###autoload
 (defun sweetgreen (args)
+  "Order salad from http://sweetgreen.com"
   (interactive "P")
   (when args
     (setq sweetgreen--curr-restaurant nil))
