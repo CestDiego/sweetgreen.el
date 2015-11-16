@@ -1,0 +1,4 @@
+(sweetgreen
+ :repo "CestDiego/sweetgreen.el"
+ :fetcher github
+ :files ("sweetgreen.el" "dir" "sweetgreen.info"))

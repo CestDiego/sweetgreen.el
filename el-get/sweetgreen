@@ -1,0 +1,6 @@
+(:name sweetgreen
+ :description "sweetgreen"
+ :depends (dash helm request cl-lib)
+ :website "https://github.com/CestDiego/sweetgreen.el"
+ :type git
+ :url "https://github.com/CestDiego/sweetgreen.el.git")
