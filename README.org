@@ -43,22 +43,16 @@ Accessor that makes it easy to traverse nested alists
 Add PRODUCT to CURR-BASKET and to the online Shopping Cart
 
 *** sweetgreen//cancel-item
-sweetgreen//cancel-item is a Lisp closure.
-
 =(sweetgreen//cancel-item ID)=
 
 Cancel Item with ID
 
 *** sweetgreen//cancel-orders
-sweetgreen//cancel-orders is a Lisp closure.
-
 =(sweetgreen//cancel-orders ORDER)=
 
 Cancel all items from ORDER
 
 *** sweetgreen//checkout
-sweetgreen//checkout is a Lisp closure.
-
 =(sweetgreen//checkout BASKET WANTED_TIME)=
 
 Checkout BASKET to be picked up at WANTED_TIME

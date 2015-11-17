@@ -10,10 +10,11 @@
 
 ;; Copyright (C) 2015 Diego Berrocal
 
-;; Created: 3 November 2015
 ;; Author: Diego Berrocal <cestdiego@gmail.com>
 ;; Homepage: https://www.github.com/CestDiego/sweetgreen.el
+;; Created: Tue Nov  3 22:33:41 2012 (-0500)
 ;; Version: 0.4
+;; URL: https://github.com/cestdiego/sweetgreen.el
 ;; Package-Requires: ((dash "2.12.1") (helm "1.5.6") (request "0.2.0") (cl-lib "0.5"))
 ;; Keywords: salad, food, sweetgreen, request
 
@@ -52,8 +53,7 @@
 (require 'json)
 
 (defgroup sweetgreen nil
-  "Order a variety of products from Sweetgreen without leaving your editor."
-  :group 'sweetgreen)
+  "Order a variety of products from Sweetgreen without leaving your editor.")
 
 (defcustom sweetgreen--username nil
   "Sweetgreen Accounr Username"
