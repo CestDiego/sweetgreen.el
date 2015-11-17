@@ -153,8 +153,7 @@
                           (string-match sweetgreen--cookie-regexp header)
                           (concat "_session_id=" (match-string 1 header)))))
     (setq sweetgreen--curr-user     (=> data 'customer) )
-    (setq sweetgreen--cookie-string cookie-string))
-  )
+    (setq sweetgreen--cookie-string cookie-string)))
 
 (defun sweetgreen//logout (curr-user)
   "Logout CURR-USER and reset Session Cookie to `nil'. "
@@ -172,8 +171,7 @@
          (header (request-response-header response "set-cookie"))
          (cookie-string (progn
                           (string-match sweetgreen--cookie-regexp header)
-                          (concat "_session_id=" (match-string 1 header))))
-         )
+                          (concat "_session_id=" (match-string 1 header)))))
     (setq sweetgreen--curr-user nil)
     (setq sweetgreen--cookie-string cookie-string)))
 
@@ -204,8 +202,7 @@
                        (=> selected_restaurant 'restaurant_slug))))
             :action
             (lambda (candidate)
-              (setq sweetgreen--curr-restaurant candidate))
-            )
+              (setq sweetgreen--curr-restaurant candidate)))
           :buffer "*Sweetgreen ❤ Restaurants*")))
 
 (defun sweetgreen/helm-menu (restaurant_id)
@@ -327,16 +324,16 @@
 (defun sweetgreen/confirm-product (product)
   "Build prompt with random pun and interactively confirm order"
   (let* ((name     (upcase-initials (=> product 'name)))
-        (restaurant (=> sweetgreen--restaurants-alist (=> product 'restaurant_id)))
-        (location (=> restaurant 'name))
-        (address (concat (=> restaurant 'address) ", " (=> restaurant 'state)))
-        (instructions (=> restaurant 'pickup_instructions))
-        (random-pun (nth (random 4) '("Orange you glad you use Emacs?"
-                                      "Do you like to party?? Lettuce turnip the beet!"
-                                      "Don't forget to lettuce know if you came from RC"
-                                      "Romaine calm! You haven't order your salad yet")) )
-        (cost     (/ (=> product 'cost) 100))
-        (calories (=> product 'calories)))
+         (restaurant (=> sweetgreen--restaurants-alist (=> product 'restaurant_id)))
+         (location (=> restaurant 'name))
+         (address (concat (=> restaurant 'address) ", " (=> restaurant 'state)))
+         (instructions (=> restaurant 'pickup_instructions))
+         (random-pun (nth (random 4) '("Orange you glad you use Emacs?"
+                                       "Do you like to party?? Lettuce turnip the beet!"
+                                       "Don't forget to lettuce know if you came from RC"
+                                       "Romaine calm! You haven't order your salad yet")) )
+         (cost     (/ (=> product 'cost) 100))
+         (calories (=> product 'calories)))
     (y-or-n-p
      (format
       "%s
@@ -438,8 +435,7 @@ Confirm your order? "
                   (let* ((basket     (aref (=> data 'orders) 0))
                          (basket_id (=> basket 'basket_id)))
                     (print data)
-                    (message "Yeah salad is ordered")
-                    ))))))
+                    (message "Yeah salad is ordered")))))))
 
 ;;;###autoload
 (defun sweetgreen (args)
