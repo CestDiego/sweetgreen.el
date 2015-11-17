@@ -108,10 +108,10 @@
 (defun sweetgreen//auth (&optional username password)
   "Authenticate USERNAME with PASSWORD to sweetgreen and get all cookies"
   (interactive)
-  (unless sweetgreen--username (setq sweetgreen--username
-                                     (read-from-minibuffer "Username: ")))
-  (unless sweetgreen--password (setq sweetgreen--password
-                                     (read-passwd "Super Secret Password: ")))
+  (unless sweetgreen--username
+    (setq sweetgreen--username (read-from-minibuffer "Username: ")))
+  (unless sweetgreen--password
+    (setq sweetgreen--password (read-passwd "Super Secret Password: ")))
   (sweetgreen//fetch-csrf-token)
   (sweetgreen//fetch-auth-cookie username password))
 
@@ -458,7 +458,8 @@ Confirm your order? "
 
          (curr-product         (sweetgreen/helm-menu curr-restaurant-id))
          (confirmed-product    (sweetgreen/confirm-product curr-product)))
-    (when confirmed-product    (sweetgreen//order-product curr-product))))
+    (when confirmed-product
+      (sweetgreen//order-product curr-product))))
 
 (provide 'sweetgreen)
 
