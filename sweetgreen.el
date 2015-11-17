@@ -77,12 +77,12 @@
 (defvar sweetgreen--cookie-string ""
   "Cookies for http://orders.sweetgreen.com")
 
-(defvar sweetgreen--restaurants-alist '()
+(defvar sweetgreen--restaurants-alist ()
   "Nearby Restaurants alist")
 
-(defvar sweetgreen--menu-alist '()
+(defvar sweetgreen--menu-alist ()
   "Menu for Current restaurant")
-(defvar sweetgreen--products-alist '()
+(defvar sweetgreen--products-alist ()
   "Menu for Current restaurant")
 (defvar sweetgreen--curr-restaurant nil
   "Current Restaurant")
@@ -90,9 +90,9 @@
 (defvar sweetgreen--available-times nil
   "Lis of times for current order")
 
-(defvar sweetgreen--items-alist '()
+(defvar sweetgreen--items-alist ()
   "Items available in the menu for the current RESTAURANT")
-(defvar sweetgreen--curr-basket '()
+(defvar sweetgreen--curr-basket ()
   "Current Basket or Shopping Cart")
 (defvar sweetgreen--curr-user      nil
   "Current logged in USER")
