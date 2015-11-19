@@ -2,11 +2,39 @@
 
 [[https://github.com/syl20bnr/spacemacs][file:https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg]]
 
-Have you ever wanted to just order your salad without leaving your favorite
-editor? Now you can!
+**UPDATE: This reached the front page of HackerNews (thank you!): time for appropiate documentation**
+
+Emacs companion to order salads without leaving your editor.
 
 
-[[Sweetgreen][file:sweetgreen.png]]
+
+This idea evolved from a joke a friend told me that goes like: "You spend
+everyday in your editor, and you eat salad everyday, you might as well eat it
+with Emacs".
+
+I took that too seriously and created this package. It does authentication and
+orders the salad you tell it to order for you, I had to reverse engineer the
+Internal API from Sweetgreen to make this work but it was worth it.
+
+** Usage?
+
+Install this package either by using MELPA or copying the =sweetgreen.el= file
+and putting it into your load path. Then to have it it's as simple as:
+
+#+begin_src emacs-lisp
+  (require 'sweetgreen)
+  (global-set-key (kbd "C-c M-s") 'sweetgreen)
+#+end_src
+
+You may of course change the keybinding to whatever you like, or just do =M-x
+sweetgreen= as I do in the following GIF.
+
+[[Sweetgreen][file:sweetgreen.gif]]
+
+Once you put your username and password once, it will not ask for it again
+during your emacs session, of course you can customize the variables
+=sweetgreen--username= and =sweetgreen--password=.
+
 * Functions & macros
 ** Interactive Functions
 
