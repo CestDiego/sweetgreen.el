@@ -1,11 +1,12 @@
 * Sweetgreen.el
 
-[[https://github.com/syl20bnr/spacemacs][file:https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg]]
+#+BEGIN_HTML
+<a href='http://www.recurse.com' title='Made with love at the Recurse Center'><img src='https://cloud.githubusercontent.com/assets/2883345/11325206/336ea5f4-9150-11e5-9e90-d86ad31993d8.png' height='20px'/></a>
+#+END_HTML
 
 **UPDATE: This reached the front page of HackerNews (thank you!): time for appropiate documentation**
 
 Emacs companion to order salads without leaving your editor.
-
 
 
 This idea evolved from a joke a friend told me that goes like: "You spend
