@@ -333,6 +333,8 @@
          (address (concat (=> restaurant 'address) ", " (=> restaurant 'state)))
          (instructions (=> restaurant 'pickup_instructions))
          (random-pun (nth (random 4) '("Orange you glad you use Emacs?"
+                                       "Woah, that's a rad-ish you got in there"
+                                       "Sending your order one beat at a time"
                                        "Do you like to party?? Lettuce turnip the beet!"
                                        "Don't forget to lettuce know if you came from RC"
                                        "Romaine calm! You haven't order your salad yet")) )
