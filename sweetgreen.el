@@ -107,7 +107,13 @@
 
 (defun => (alist &rest keys)
   "Accessor that makes it easy to traverse nested alists"
-  (-reduce-from (lambda (acc item) (assoc-default item acc)) alist keys))
+  (-reduce-from (lambda (acc item)
+                  (cond
+                        ((symbolp item)     (assoc-default item acc))
+                        ((numberp item)     (aref acc item))
+                        ))
+                alist keys))
+
 
 (defun sweetgreen//auth (&optional username password)
   "Authenticate USERNAME with PASSWORD to sweetgreen and get all cookies"
