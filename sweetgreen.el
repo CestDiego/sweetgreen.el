@@ -154,8 +154,8 @@
                                ("Content-Type" . "application/json"))
                     :parser 'json-read
                     :error
-                    (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                   (error "Got error: %S" error-thrown)))
+                    (cl-function (lambda (&rest args &key error-thrown &allow-other-keys)
+                                   (message "Got error: %S" error-thrown)))
                     ))
          (header (request-response-header response "set-cookie"))
          (data (request-response-data response))
