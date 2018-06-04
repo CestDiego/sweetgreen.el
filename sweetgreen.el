@@ -162,7 +162,7 @@
          (cookie-string (progn
                           (string-match sweetgreen--cookie-regexp header)
                           (concat "_session_id=" (match-string 1 header)))))
-    (setq sweetgreen--curr-user     (=> data 'customer) )
+    (setq sweetgreen--curr-user     (=> data 'customers 0))
     (setq sweetgreen--cookie-string cookie-string)))
 
 (defun sweetgreen//logout (curr-user)
