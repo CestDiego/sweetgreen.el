@@ -148,10 +148,10 @@
                     "https://order.sweetgreen.com/api/customers/login_or_register"
                     :type "POST"
                     :sync t
-                    :data `(("customer[email]" . ,username)
-                            ("customer[password]" . ,password))
+                    :data (json-encode `(("customer" . (("email" . ,username)
+                                                   ("password" . ,password)))))
                     :headers '(("Accept"       . "application/json")
-                               ("Content-Type" . "application/x-www-form-urlencoded"))
+                               ("Content-Type" . "application/json"))
                     :parser 'json-read
                     :error
                     (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
