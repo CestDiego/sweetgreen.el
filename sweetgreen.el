@@ -145,7 +145,7 @@
 (defun sweetgreen//fetch-auth-cookie (username password)
   "Login to get a session cookie"
   (let* ((response (request
-                    "https://order.sweetgreen.com/api/customers/login"
+                    "https://order.sweetgreen.com/api/customers/login_or_register"
                     :type "POST"
                     :sync t
                     :data `(("customer[email]" . ,username)
