@@ -245,6 +245,7 @@
         sweetgreen--menu-alist))
 
 
+;; Some restaurants don't accept orders
 (defun sweetgreen//get-restaurants (zip_code)
   "Get Restaurants alist out of your zip code"
   (when (and sweetgreen--csrf-token
