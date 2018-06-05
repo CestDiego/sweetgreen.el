@@ -456,18 +456,7 @@ Confirm your order? "
                   ("wanted_time"                   . ,wanted_time)
                   ("uploaded_at")
                   ("contact_number" . "1111111111")
-                  ("state" . "complete")
-                  ("billing_account" .
-                   (
-                    ("card_type" . "cash")
-                    ("card_number")
-                    ("zip")
-                    ("last_four")
-                    ("cvv")
-                    ("expiry_month")
-                    ("expiry_year")
-                    ("description" . "sweetgreen Rewards (Pay with App)")
-                    ("save_on_file" . :json-false))))))))
+                  ("state" . "complete"))))))
     (request
      (concat "https://order.sweetgreen.com/api/orders/" (number-to-string (=> basket 'id)))
      :type "PUT"
