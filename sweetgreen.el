@@ -73,7 +73,7 @@
   :type 'string
   :group 'sweetgreen)
 
-(defvar sweetgreen--preferred-billing-account 0
+(defvar sweetgreen--preferred-billing-account '()
   "Preferred billing account id")
 
 (defvar sweetgreen--csrf-token-regexp "<meta content=\"\\([^\"]+\\).*?csrf-token.*?>"
@@ -344,7 +344,7 @@
     (setq sweetgreen--available-times (=> order 'available_wanted_times_tuples))
     (setq sweetgreen--curr-basket order)))
 
-(defun sweetgreen//confirm-payment ()
+(defun sweetgreen/confirm-payment ()
   "Choose from Payment options available in the user's account we do not store any credit card information"
   (let* ((response  (request
                      (format "https://order.sweetgreen.com/api/customers/%.0f"
@@ -359,7 +359,7 @@
                      (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
                                     (error "Got Error Getting Customer Data for confirm payment: %S" error-thrown)))))
          (data               (request-response-data response)))
-    (setq sweetgreen--preferred-billing-account (let ((billing-accounts (--map `(,(=> it 'description) . ,(=> it 'id))
+    (setq sweetgreen--preferred-billing-account (let ((billing-accounts (--map `(,(=> it 'description) . ,it)
                                                                                (=> data 'billing_accounts))))
                                                   (helm
                                                    :sources (helm-build-sync-source "Select Billing Method"
@@ -387,9 +387,14 @@
      (format
       "%s
 You are buying the %s
+
 At the %s location @ %s
+
 %s
-Price before Taxes is $%.2f
+
+Price before Taxes is $%.2f.
+You are Paying with %s
+
 It contains %.0f calories
 Confirm your order? "
       random-pun
@@ -398,6 +403,7 @@ Confirm your order? "
       address
       instructions
       cost
+      (=> sweetgreen--preferred-billing-account 'description)
       calories))))
 
 (defun sweetgreen//helm-select-time (order)
@@ -446,7 +452,7 @@ Confirm your order? "
                  (
                   ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
                   ("basket_id"                     . ,(=> basket 'basket_id))
-                  ("billing_account_id"            . ,sweetgreen--preferred-billing-account)
+                  ("billing_account_id"            . ,(=> sweetgreen--preferred-billing-account 'id))
                   ("created_at"                    . ,(=> basket 'created_at))
                   ("coupon_code"                   . ,(=> basket 'coupon_code))
                   ("coupon_discount"               . ,(=> basket 'coupon_discount))
@@ -481,6 +487,8 @@ Confirm your order? "
   "Order salad from http://sweetgreen.com"
   (interactive "P")
   (when args
+    (setq sweetgreen--username nil)
+    (setq sweetgreen--password nil)
     (setq sweetgreen--curr-restaurant nil))
   (when sweetgreen--curr-user
     (sweetgreen//logout sweetgreen--curr-user))
