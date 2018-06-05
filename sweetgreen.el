@@ -176,7 +176,7 @@
                     :type "DELETE"
                     :sync t
                     :headers '(("Accept"       . "application/json")
-                               ("Content-Type" . "application/x-www-form-urlencoded")
+                               ("Content-Type" . "application/json")
                                ("X-CSRF-Token" . ,sweetgreen--csrf-token))
                     :parser 'buffer-string
                     :error
