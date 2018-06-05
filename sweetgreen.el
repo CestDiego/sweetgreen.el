@@ -131,19 +131,17 @@
 (defun sweetgreen//fetch-csrf-token ()
   "Parse CSRF-Token out of Sweetgreen's Homepage"
   (let* ((response (request
-                   "https://order.sweetgreen.com"
-                   :type "GET"
-                   :sync t
-                   :parser 'buffer-string
-                   :error
-                   (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                  (error "Got error: %S" error-thrown)))
-                   ))
-        (data  (request-response-data response))
-        (csrf-token (progn
-                      (string-match sweetgreen--csrf-token-regexp data)
-                      (match-string 1 data))))
-    (setq sweetgreen--csrf-token csrf-token)))
+                    "https://order.sweetgreen.com/api/session"
+                    :type "GET"
+                    :sync t
+                    :parser 'json-read
+                    :headers `(("Cookie" . ,sweetgreen--cookie-string))
+                    :error
+                    (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                   (error "Error Fetching CSRF Token: %S" error-thrown)))
+                    ))
+        (data  (request-response-data response)))
+    (setq sweetgreen--csrf-token (=> data 'session 'csrf))))
 
 (defun sweetgreen//fetch-auth-cookie (username password)
   "Login to get a session cookie"
