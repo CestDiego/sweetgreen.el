@@ -110,7 +110,9 @@
   (-reduce-from (lambda (acc item)
                   (cond
                         ((symbolp item)     (assoc-default item acc))
-                        ((numberp item)     (aref acc item))
+                        ((numberp item)     (if (arrayp acc)
+                                                (aref acc item)
+                                              (assoc-default item acc)))
                         ))
                 alist keys))
 
