@@ -156,7 +156,7 @@
                     :parser 'json-read
                     :error
                     (cl-function (lambda (&rest args &key error-thrown &allow-other-keys)
-                                   (message "Got error: %S" error-thrown)))
+                                   (message "Got Error Fetching Auth Cookie: %S %S %S" username password error-thrown)))
                     ))
          (header (request-response-header response "set-cookie"))
          (data (request-response-data response))
@@ -178,7 +178,11 @@
                     :headers '(("Accept"       . "application/json")
                                ("Content-Type" . "application/x-www-form-urlencoded")
                                ("X-CSRF-Token" . ,sweetgreen--csrf-token))
-                    :parser 'buffer-string))
+                    :parser 'buffer-string
+                    :error
+                    (cl-function (lambda (&rest args &key error-thrown &allow-other-keys)
+                                   (message "Error Logging Out: %S %S %S" username password error-thrown)))
+                    ))
          (header (request-response-header response "set-cookie"))
          (cookie-string (progn
                           (string-match sweetgreen--cookie-regexp header)
@@ -325,8 +329,8 @@
 
                      :parser 'json-read
                      :error
-                     (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
-                                    (error "Got error: %S" error-thrown)))))
+                     (cl-function (lambda (&key data error-thrown &allow-other-keys &rest _)
+                                    (error "Got Error Fetching Basket: %S" error-thrown)))))
          (data       (request-response-data response))
          (order      (aref (=> data 'orders) 0)))
     (setq sweetgreen--curr-basket-id (=> order 'basket_id))
