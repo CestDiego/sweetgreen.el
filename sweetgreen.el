@@ -446,7 +446,7 @@ Confirm your order? "
                  (
                   ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
                   ("basket_id"                     . ,(=> basket 'basket_id))
-                  ("billing_account_id"            . ,sweetgreen--preferred-billing-account
+                  ("billing_account_id"            . ,sweetgreen--preferred-billing-account)
                   ("created_at"                    . ,(=> basket 'created_at))
                   ("coupon_code"                   . ,(=> basket 'coupon_code))
                   ("coupon_discount"               . ,(=> basket 'coupon_discount))
