@@ -69,6 +69,9 @@
   :type 'string
   :group 'sweetgreen)
 
+(defvar sweetgreen--preferred-billing-account 0
+  "Preferred billing account id")
+
 (defvar sweetgreen--csrf-token-regexp "<meta content=\"\\([^\"]+\\).*?csrf-token.*?>"
   "Regular Expression used to grab the CSRF Token from the index page.")
 
@@ -337,6 +340,30 @@
     (setq sweetgreen--available-times (=> order 'available_wanted_times_tuples))
     (setq sweetgreen--curr-basket order)))
 
+(defun sweetgreen//confirm-payment ()
+  "Choose from Payment options available in the user's account we do not store any credit card information"
+  (let* ((response  (request
+                     (format "https://order.sweetgreen.com/api/customers/%.0f"
+                             (=> sweetgreen--curr-user 'id))
+                     :type    "GET"
+                     :sync    t
+                     :headers `(("Content-Type" . "application/json")
+                                ("Cookie" . ,sweetgreen--cookie-string)
+                                ("X-CSRF-Token" . ,sweetgreen--csrf-token))
+                     :parser 'json-read
+                     :error
+                     (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
+                                    (error "Got Error Getting Customer Data for confirm payment: %S" error-thrown)))))
+         (data               (request-response-data response)))
+    (setq sweetgreen--preferred-billing-account (let ((billing-accounts (--map `(,(=> it 'description) . ,(=> it 'id))
+                                                                               (=> data 'billing_accounts))))
+                                                  (helm
+                                                   :sources (helm-build-sync-source "Select Billing Method"
+                                                              :candidates billing-accounts
+                                                              :action 'identity)
+                                                   :buffer "🌟 Sweetgreen 💖 Select Billing Method 💳 🌟")))))
+
+
 (defun sweetgreen/confirm-product (product)
   "Build prompt with random pun and interactively confirm order"
   (let* ((name     (upcase-initials (=> product 'name)))
@@ -415,6 +442,7 @@ Confirm your order? "
                  (
                   ("available_wanted_times_tuples" . ,(=> basket 'available_wanted_times_tuples))
                   ("basket_id"                     . ,(=> basket 'basket_id))
+                  ("billing_account_id"            . ,sweetgreen--preferred-billing-account
                   ("created_at"                    . ,(=> basket 'created_at))
                   ("coupon_code"                   . ,(=> basket 'coupon_code))
                   ("coupon_discount"               . ,(=> basket 'coupon_discount))
@@ -471,7 +499,9 @@ Confirm your order? "
          (curr-restaurant-id (number-to-string (=> curr-restaurant 'id)))
 
          (curr-product         (sweetgreen/helm-menu curr-restaurant-id))
-         (confirmed-product    (sweetgreen/confirm-product curr-product)))
+         (confirm-payment      (sweetgreen/confirm-payment))
+         (confirmed-product    (sweetgreen/confirm-product curr-product))
+         )
     (when confirmed-product
       (sweetgreen//order-product curr-product))))
 
