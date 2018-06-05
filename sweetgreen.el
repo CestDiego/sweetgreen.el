@@ -16,7 +16,7 @@
 ;; 16-Nov-2015    Diego Berrocal
 ;;    Add Org-Readme
 
-;; Copyright (C) 2015 Diego Berrocal
+;; Copyright (C) 2018 Diego Berrocal
 
 ;; Author: Diego Berrocal <cestdiego@gmail.com>
 ;; Homepage: https://www.github.com/CestDiego/sweetgreen.el
