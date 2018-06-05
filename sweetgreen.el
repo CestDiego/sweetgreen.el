@@ -329,7 +329,7 @@
 
                      :parser 'json-read
                      :error
-                     (cl-function (lambda (&key data error-thrown &allow-other-keys &rest _)
+                     (cl-function (lambda (&key data error-thrown &allow-other-keys&rest _)
                                     (error "Got Error Fetching Basket: %S" error-thrown)))))
          (data       (request-response-data response))
          (order      (aref (=> data 'orders) 0)))
